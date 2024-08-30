@@ -1,0 +1,161 @@
+# requirements.txt
+ngrok==1.3.0
+uvicorn==0.29.0
+fastapi==0.111.0
+loguru==0.7.2
+
+
+@app.get("/events", response_class=HTMLResponse)
+async def events(request: Request, db: Session = Depends(get_db)):
+    user_email = get_current_user(request)  # Get the current user's email
+    user = db.query(User).filter(User.email == user_email).first()  # Fetch the current user from the database
+
+    if not user:
+        raise HTTPException(status_code=403, detail="User not found")
+
+    user_events = db.query(Event).filter(Event.user_id == user.id).all()  # Fetch only events belonging to the user
+
+    return templates.TemplateResponse("events.html", {"request": request, "email": user_email, "events": user_events})
+
+
+@app.get("/create-event", response_class=HTMLResponse)
+async def create_event(request: Request):
+    return templates.TemplateResponse("create_event.html", {"request": request})
+
+@app.post("/events/", response_class=HTMLResponse)
+async def create_event_post(
+    request: Request,
+    event_name: str = Form(...),
+    venue_address: str = Form(...),
+    event_date: str = Form(...),
+    audience: bool = Form(False),
+    delegates: bool = Form(False),
+    speaker: bool = Form(False),
+    nri: bool = Form(False),
+    db: Session = Depends(get_db)
+):
+    user_email = get_current_user(request)  # Get the current user's email
+    user = db.query(User).filter(User.email == user_email).first()  # Fetch the current user from the database
+
+    if not user:
+        raise HTTPException(status_code=403, detail="User not found")
+
+    # Convert event_date string to a Python date object
+    try:
+        event_date_converted = datetime.strptime(event_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD format.")
+
+    new_event = Event(
+        event_name=event_name,
+        venue_address=venue_address,
+        event_date=event_date_converted,  # Use the converted date object
+        audience=audience,
+        delegates=delegates,
+        speaker=speaker,
+        nri=nri,
+        user_id=user.id  # Associate the event with the user's ID
+    )
+    db.add(new_event)
+    db.commit()
+    db.refresh(new_event)
+    eventn = event_name
+    f = db.query(Event).filter(Event.event_name==eventn).first()
+    event_id=f.id
+    request.session['event_id']=event_id
+
+
+    # Redirect to dashboard after event creation
+    return templates.TemplateResponse("formlink.html",{"request": request, "event_id": event_id})
+
+@app.get("/submit_form")
+def getforms(request:Request):
+    event_id = request.session.get('event_id')
+    print("events",event_id)
+    return templates.TemplateResponse("forms.html",{"request": request, "event_id": event_id})
+
+
+@app.post("/submit_form/{event_name}")
+def postforms(request:Request,event_name:str=Path(...),name:str=Form(...),email:str=Form(...),phoneno:str=Form(...),Dropdown:str=Form(...),db: SessionLocal = Depends(get_db)):
+    id=1
+    event_id=request.session.get('event_id')
+    print("submit_form", event_id)
+    formuser=EventFormCreate(id=id,event_id=event_id,name=name,email=email,phoneno=phoneno,Dropdown=Dropdown)
+    user=EventForm(name=formuser.name,event_id=formuser.event_id,email=formuser.email,phoneno=formuser.phoneno,Dropdown=formuser.Dropdown)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+ 2nd
+
+
+@app.get("/create-event", response_class=HTMLResponse)
+async def create_event(request: Request):
+    return templates.TemplateResponse("create_event.html", {"request": request})
+
+@app.post("/events/", response_class=HTMLResponse)
+async def create_event_post(
+    request: Request,
+    event_name: str = Form(...),
+    venue_address: str = Form(...),
+    event_date: str = Form(...),
+    audience: bool = Form(False),
+    delegates: bool = Form(False),
+    speaker: bool = Form(False),
+    nri: bool = Form(False),
+    db: Session = Depends(get_db)
+):
+    user_email = get_current_user(request)  # Get the current user's email
+    user = db.query(User).filter(User.email == user_email).first()  # Fetch the current user from the database
+
+    if not user:
+        raise HTTPException(status_code=403, detail="User not found")
+
+    # Convert event_date string to a Python date object
+    try:
+        event_date_converted = datetime.strptime(event_date, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD format.")
+
+    new_event = Event(
+        event_name=event_name,
+        venue_address=venue_address,
+        event_date=event_date_converted,  # Use the converted date object
+        audience=audience,
+        delegates=delegates,
+        speaker=speaker,
+        nri=nri,
+        user_id=user.id  # Associate the event with the user's ID
+    )
+    db.add(new_event)
+    db.commit()
+    db.refresh(new_event)
+    eventn = event_name
+    f = db.query(Event).filter(Event.event_name==eventn).first()
+    event_id=f.id
+    request.session['event_id']=event_id
+
+
+    # Redirect to dashboard after event creation
+    return templates.TemplateResponse("formlink.html",{"request": request, "event_id": event_id})
+
+@app.get("/submit_form")
+def getforms(request:Request):
+    event_id = request.session.get('event_id')
+    print("events",event_id)
+    return templates.TemplateResponse("forms.html",{"request": request, "event_id": event_id})
+
+
+@app.post("/submit_form")
+def postforms(request:Request,event_name:str=Path(...),name:str=Form(...),email:str=Form(...),phoneno:str=Form(...),Dropdown:str=Form(...),db: SessionLocal = Depends(get_db)):
+    id=1
+    event_id=request.session.get('event_id')
+    print("submit_form", event_id)
+    formuser=EventFormCreate(id=id,event_id=event_id,name=name,email=email,phoneno=phoneno,Dropdown=Dropdown)
+    user=EventForm(name=formuser.name,event_id=formuser.event_id,email=formuser.email,phoneno=formuser.phoneno,Dropdown=formuser.Dropdown)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
