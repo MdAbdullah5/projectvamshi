@@ -1,17 +1,20 @@
-from fastapi import FastAPI, Form, Request, Depends, HTTPException, BackgroundTasks,Path
+from fastapi import FastAPI, Form, Request, Depends, HTTPException, BackgroundTasks,Path,File,UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 from itsdangerous import URLSafeTimedSerializer
 from database import SessionLocal, engine, Base
-from models import User, Event, EventForm
+from models import User, Event, EventForm,Image
 from schemas import UserSchema, EventCreate, EventResponse, EventFormCreate, EventFormResponse
 from jinja2 import Template
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
+from io import BytesIO
+from starlette.responses import StreamingResponse
+# from PIL import  Image
 from datetime import datetime
 
 
@@ -285,22 +288,47 @@ async def create_event_post(
 
 @app.get("/submit_form")
 def getforms(request:Request):
-    event_id = request.session.get('event_id')
-    print("events",event_id)
-    return templates.TemplateResponse("forms.html",{"request": request, "event_id": event_id})
+    # event_id = request.session.get('event_id')
+    # print("events",event_id)
+    return templates.TemplateResponse("forms.html",{"request": request})
 
 
 @app.post("/submit_form")
-def postforms(request:Request,name:str=Form(...),email:str=Form(...),phoneno:str=Form(...),Dropdown:str=Form(...),db: SessionLocal = Depends(get_db)):
+async def postforms(request:Request,event_name=Form(...),name:str=Form(...),email:str=Form(...),phoneno:str=Form(...),Dropdown:str=Form(...),
+    file: UploadFile = File(...),db: SessionLocal = Depends(get_db)):
     id=1
-    event_id=request.session.get('event_id')
-    print("submit_form", event_id)
-    formuser=EventFormCreate(id=id,event_id=event_id,name=name,email=email,phoneno=phoneno,Dropdown=Dropdown)
-    user=EventForm(name=formuser.name,event_id=formuser.event_id,email=formuser.email,phoneno=formuser.phoneno,Dropdown=formuser.Dropdown)
+    user=db.query(Event).filter(Event.event_name==event_name).first()
+    event_id=user.id
+    # event_id=request.session.get('event_id')
+    # print("submit_form", event_id)
+    image_data = await file.read() if file else None
+    print(type(image_data))
+    formuser=EventFormCreate(id=id,event_id=event_id,name=name,email=email,phoneno=phoneno,Dropdown=Dropdown,image=image_data)
+    user=EventForm(name=formuser.name,event_id=formuser.event_id,email=formuser.email,phoneno=formuser.phoneno,Dropdown=formuser.Dropdown, image_data=formuser.image )
     db.add(user)
     db.commit()
     db.refresh(user)
-    return user
+    return "successful"
+
+
+@app.get("/EventRegistrations")
+def getEventRegistrations(request:Request):
+    return templates.TemplateResponse("registrations.html",{"request": request})
+@app.post("/EventRegistrations")
+def getEventR(request:Request,event_name=Form(...),db: SessionLocal = Depends(get_db)):
+    user_email = get_current_user(request)
+    user=db.query(User).filter(User.email==user_email).first()
+    r=db.query(Event).filter(Event.id==user.id).first()
+    result=db.query(EventForm).filter(EventForm.event_id==r.id ).all()
+
+    # rows = [row._asdict() for row in result]
+    # print(rows)
+
+    return "done"
+
+
+
+
 
 @app.get("/edit-event", response_class=HTMLResponse)
 async def edit_event(request: Request, db: Session = Depends(get_db)):
@@ -375,7 +403,15 @@ async def delete_event(
     return RedirectResponse(url="/events", status_code=303)
 
 
+@app.get("/image/{image_id}")
+async def get_image(image_id: int, db: Session = Depends(get_db)):
+    db_image = db.query(EventForm).filter(EventForm.id == image_id).first()
+    if db_image is None:
+        raise HTTPException(status_code=404, detail="Image not found")
+    return StreamingResponse(BytesIO(db_image.image_data), media_type="image/jpeg")
+
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="192.168.29.237", port=8001)
+    uvicorn.run(app, host="127.0.0.1", port=8001)

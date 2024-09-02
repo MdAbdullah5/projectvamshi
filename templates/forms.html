@@ -81,8 +81,8 @@
 <body>
 
 <div class="signup-container">
-    <h2>Signup</h2>
-    <form action="/submit_form" method="POST">
+    <h2>Submit Event Form</h2>
+    <form action="/submit_form" method="POST" enctype="multipart/form-data">
           <input type="hidden" name="event_id" value="{{ event_id }}">
 
         <label for="name">Full Name</label>
@@ -100,6 +100,17 @@
     <option value="app2">App 2</option>
     <option value="app3">App 3</option>
   </select><br><br>
+
+
+
+        <label for="event_name">event_name</label>
+        <input type="text" id="event_name" name="event_name"  placeholder="Enter eventname" required><br><br>
+
+
+
+
+         <label for="file">Choose an image file:</label>
+        <input type="file" id="file" name="file" accept="image/*" required>
 
 
 

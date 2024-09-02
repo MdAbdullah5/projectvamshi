@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean,Enum,Date,ARRAY,DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean,Enum,Date,ARRAY,DateTime, ForeignKey,LargeBinary
 from database import Base
 from sqlalchemy.orm import column_property, relationship
+from PIL import Image
 import enum
 
 class User(Base):
@@ -39,5 +40,39 @@ class EventForm(Base):
     email = Column(String, index=True)
     phoneno = Column(String)
     Dropdown = Column(String)
+    image_data = Column(LargeBinary)
 
     event = relationship("Event", back_populates="forms")
+
+
+class Image(Base):
+    __tablename__ = "images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    eventname = Column(String, nullable=False)
+    image_data = Column(LargeBinary, nullable=False)
+
+
+# # models.py
+# from sqlalchemy import create_engine, Column, Integer, String, LargeBinary
+# from sqlalchemy.ext.declarative import declarative_base
+# from sqlalchemy.orm import sessionmaker
+#
+# DATABASE_URL = "sqlite:///./test.db"
+#
+# engine = create_engine(DATABASE_URL)
+# SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Base = declarative_base()
+#
+#
+# class Image(Base):
+#     __tablename__ = "images"
+#
+#     id = Column(Integer, primary_key=True, index=True)
+#     eventname = Column(String, nullable=False)
+#     image_data = Column(LargeBinary, nullable=False)
+#
+#
+# # Create the database tables
+# def init_db():
+#     Base.metadata.create_all(bind=engine)

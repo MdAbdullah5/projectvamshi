@@ -1,5 +1,7 @@
 from pydantic import BaseModel, condate
 from typing import Optional, List
+from PIL import Image
+from fastapi import UploadFile
 
 # Schema for User creation and response
 class UserSchema(BaseModel):
@@ -34,10 +36,12 @@ class EventFormCreate(BaseModel):
     email: str
     phoneno: str
     Dropdown: str
+    image: Optional[bytes] = None
+
 
 # Schema for Event Form response
 class EventFormResponse(EventFormCreate):
     id: int
 
-    class Config:
-        from_attributes = True
+    # class Config:
+    #     from_attributes = True
